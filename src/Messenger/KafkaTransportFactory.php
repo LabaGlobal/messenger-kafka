@@ -59,7 +59,7 @@ class KafkaTransportFactory implements TransportFactoryInterface
         $conf = new KafkaConf();
 
         // Set a rebalance callback to log partition assignments (optional)
-        $conf->setRebalanceCb($this->createRebalanceCb($this->logger));
+        $conf->setRebalanceCb($this->createRebalanceCb($this->logger, $this->isCooperative($options['kafka_conf'] ?? [])));
 
         $brokers = $this->stripProtocol($dsn);
         $conf->set('metadata.broker.list', implode(',', $brokers));
@@ -100,9 +100,9 @@ class KafkaTransportFactory implements TransportFactoryInterface
         return $brokers;
     }
 
-    private function createRebalanceCb(LoggerInterface $logger): \Closure
+    private function createRebalanceCb(LoggerInterface $logger, bool $isCooperative = false): \Closure
     {
-        return function (KafkaConsumer $kafka, $err, array $topicPartitions = null) use ($logger) {
+        return function (KafkaConsumer $kafka, $err, array $topicPartitions = null) use ($logger, $isCooperative) {
             /** @var TopicPartition[] $topicPartitions */
             $topicPartitions = $topicPartitions ?? [];
 
@@ -111,19 +111,39 @@ class KafkaTransportFactory implements TransportFactoryInterface
                     foreach ($topicPartitions as $topicPartition) {
                         $logger->info(sprintf('Assign: %s %s %s', $topicPartition->getTopic(), $topicPartition->getPartition(), $topicPartition->getOffset()));
                     }
-                    $kafka->assign($topicPartitions);
+
+                    $this->assign($kafka, $isCooperative, $topicPartitions);
                     break;
 
                 case RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS:
                     foreach ($topicPartitions as $topicPartition) {
                         $logger->info(sprintf('Assign: %s %s %s', $topicPartition->getTopic(), $topicPartition->getPartition(), $topicPartition->getOffset()));
                     }
-                    $kafka->assign(null);
+
+                    dd($topicPartitions);
+
+                    $this->assign($kafka, $isCooperative);
                     break;
 
                 default:
                     throw new \Exception($err);
             }
         };
+    }
+
+    private function assign(KafkaConsumer $kafka, bool $isCooperative = false, ?array $topicPartitions = null): void
+    {
+        if ($isCooperative) {
+            $kafka->incrementalAssign($topicPartitions);
+
+            return;
+        }
+
+        $kafka->assign($topicPartitions);
+    }
+
+    private function isCooperative(array $conf): bool
+    {
+        return (explode(',', $conf['partition.assignment.strategy'] ?? '')[0] ?? '') === 'cooperative-sticky';
     }
 }
