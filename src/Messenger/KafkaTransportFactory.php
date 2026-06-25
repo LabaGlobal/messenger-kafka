@@ -102,7 +102,7 @@ class KafkaTransportFactory implements TransportFactoryInterface
 
     private function createRebalanceCb(LoggerInterface $logger, bool $isCooperative = false): \Closure
     {
-        return function (KafkaConsumer $kafka, $err, array $topicPartitions = null) use ($logger, $isCooperative) {
+        return function (KafkaConsumer $kafka, $err, ?array $topicPartitions = null) use ($logger, $isCooperative) {
             /** @var TopicPartition[] $topicPartitions */
             $topicPartitions = $topicPartitions ?? [];
 
