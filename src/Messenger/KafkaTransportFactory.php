@@ -119,9 +119,7 @@ class KafkaTransportFactory implements TransportFactoryInterface
                     foreach ($topicPartitions as $topicPartition) {
                         $logger->info(sprintf('Assign: %s %s %s', $topicPartition->getTopic(), $topicPartition->getPartition(), $topicPartition->getOffset()));
                     }
-
-                    dd($topicPartitions);
-
+                    
                     $this->assign($kafka, $isCooperative);
                     break;
 
