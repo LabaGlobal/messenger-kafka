@@ -119,7 +119,7 @@ class KafkaTransportFactory implements TransportFactoryInterface
                     foreach ($topicPartitions as $topicPartition) {
                         $logger->info(sprintf('Assign: %s %s %s', $topicPartition->getTopic(), $topicPartition->getPartition(), $topicPartition->getOffset()));
                     }
-                    
+
                     $this->assign($kafka, $isCooperative);
                     break;
 
@@ -132,7 +132,7 @@ class KafkaTransportFactory implements TransportFactoryInterface
     private function assign(KafkaConsumer $kafka, bool $isCooperative = false, ?array $topicPartitions = null): void
     {
         if ($isCooperative) {
-            $kafka->incrementalAssign($topicPartitions);
+            $kafka->incrementalAssign($topicPartitions ?? []);
 
             return;
         }
