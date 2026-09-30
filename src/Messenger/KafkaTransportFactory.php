@@ -112,32 +112,30 @@ class KafkaTransportFactory implements TransportFactoryInterface
                         $logger->info(sprintf('Assign: %s %s %s', $topicPartition->getTopic(), $topicPartition->getPartition(), $topicPartition->getOffset()));
                     }
 
-                    $this->assign($kafka, $isCooperative, $topicPartitions);
+                    if ($isCooperative) {
+                        $kafka->incrementalAssign($topicPartitions);
+                    } else {
+                        $kafka->assign($topicPartitions);
+                    }
                     break;
 
                 case RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS:
                     foreach ($topicPartitions as $topicPartition) {
-                        $logger->info(sprintf('Assign: %s %s %s', $topicPartition->getTopic(), $topicPartition->getPartition(), $topicPartition->getOffset()));
+                        $logger->info(sprintf('Revoke: %s %s %s', $topicPartition->getTopic(), $topicPartition->getPartition(), $topicPartition->getOffset()));
                     }
 
-                    $this->assign($kafka, $isCooperative);
+                    if ($isCooperative) {
+                        $kafka->incrementalUnassign($topicPartitions);
+                    } else {
+                        $kafka->assign(null);
+                    }
+
                     break;
 
                 default:
                     throw new \Exception($err);
             }
         };
-    }
-
-    private function assign(KafkaConsumer $kafka, bool $isCooperative = false, ?array $topicPartitions = null): void
-    {
-        if ($isCooperative) {
-            $kafka->incrementalAssign($topicPartitions ?? []);
-
-            return;
-        }
-
-        $kafka->assign($topicPartitions);
     }
 
     private function isCooperative(array $conf): bool
